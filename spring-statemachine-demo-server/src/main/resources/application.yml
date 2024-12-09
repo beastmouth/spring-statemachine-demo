@@ -1,0 +1,6 @@
+spring:
+  redis:
+    host: ${REDIS_URL:uuu.huangbangjing.cn}
+    port: 6379
+    password: ${REDIS_PASSWORD:hbj123456!.}
+    database: 0
