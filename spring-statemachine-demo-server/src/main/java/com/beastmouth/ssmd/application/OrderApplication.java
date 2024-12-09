@@ -1,7 +1,6 @@
 package com.beastmouth.ssmd.application;
 
 import cn.hutool.core.util.IdUtil;
-import cn.hutool.json.JSONUtil;
 import com.beastmouth.ssmd.api.enums.OrderStateEnums;
 import com.beastmouth.ssmd.entity.OrderDO;
 import com.beastmouth.ssmd.enums.OrderEventEnum;
@@ -38,7 +37,7 @@ public class OrderApplication {
         if (orderState == null) {
             throw new RuntimeException("[订单] 订单创建失败");
         }
-        log.info("[订单] 创建, id:{}, orderState:{}", orderId, orderState);
+        log.info("[订单] 创建执行完成, id:{}, orderState:{}", orderId, orderState);
         return orderId;
     }
 
@@ -53,7 +52,7 @@ public class OrderApplication {
         if (orderState == null) {
             throw new RuntimeException("[订单] 订单提交支付失败, id:" + orderId);
         }
-        log.info("[订单] 提交支付, id:{}, orderState:{}", orderId, orderState);
+        log.info("[订单] 提交支付执行完成, id:{}, orderState:{}", orderId, orderState);
         return orderId;
     }
 
@@ -68,23 +67,24 @@ public class OrderApplication {
         if (orderState == null) {
             throw new RuntimeException("[订单] 订单支付成功操作执行失败, id:" + orderId);
         }
-        log.info("[订单] 支付成功, id:{}, orderState:{}", orderId, orderState);
+        log.info("[订单] 支付成功执行完成, id:{}, orderState:{}", orderId, orderState);
         return orderId;
     }
 
     private synchronized Integer processEvent(Message<OrderEventEnum> message) {
         // 根据初始状态创建状态机
         try {
+            // 序列化，仅有一个线程能够成功
             stateMachine.start();
             OrderDO order = (OrderDO) message.getHeaders().get("order");
             log.info("[状态机] 开始执行, id:{}, event:{}", order.getId(), message.getPayload());
             orderStateMachinePersister.restore(stateMachine, "ssmd:statemachine:order:" + order.getId());
             State<OrderStateEnums, OrderEventEnum> state = stateMachine.getState();
-            log.info("[状态机] 状态机执行前state:{}", JSONUtil.toJsonStr(state));
+            log.info("[状态机] 状态机执行前, id:{}, state:{}", order.getId(), state.getId().getCode());
             Integer beforeState = state.getId().getCode();
             stateMachine.sendEvent(message.getPayload());
             state = stateMachine.getState();
-            log.info("[状态机] 状态机执行后state:{}", JSONUtil.toJsonStr(state));
+            log.info("[状态机] 状态机执行后, id:{}, state:{}", order.getId(), state.getId().getCode());
             OrderStateEnums curState = stateMachine.getState().getId();
             Integer afterState = curState.getCode();
             if (Objects.equals(beforeState, afterState)) {
